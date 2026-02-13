@@ -1,0 +1,31 @@
+Score Keeper 🏏
+
+A lightweight, mobile-responsive web application for scoring cricket matches in real-time. Built entirely with vanilla web technologies, this app is perfect for tracking local matches, tournaments, or casual games with friends.
+
+Live Demo: 
+[scorekeeper.online](https://scorekeeper.online)
+
+✨ Features
+
+* **Interactive Match Setup:** Set custom over limits before the match begins.
+* **Real-Time Tracking:** Tracks runs, wickets, overs, and dynamically calculates the target and required run rate for the second innings.
+* **Comprehensive Keypad:** One-click buttons for legal runs (0-6), Wides (WD), No Balls (NB), and Wickets (OUT).
+* **Advanced Extras Logic:** * Custom modals to handle complex deliveries like No Balls with runs off the bat, or No Balls resulting in a run-out.
+    * A custom `+` button to add penalty or overthrow runs to the previous delivery.
+* **Undo Functionality:** Made a mistake? The "Undo" button rolls back the exact state of the previous ball.
+* **Live Scorecard:** A built-in modal that displays a ball-by-ball breakdown of both the 1st and 2nd innings.
+* **Engaging UI/UX:** Features a dark-mode interface, an animated bat-and-ball intro screen, and a confetti celebration screen for the winning team.
+
+ 🛠️ Tech Stack
+
+* **HTML5:** Semantic structure and layout.
+* **CSS3:** Custom variables, flexbox/grid layouts, and keyframe animations for the UI.
+* **Vanilla JavaScript:** Core game logic, state management, and DOM manipulation without any external libraries.
+
+ 🚀 How to Run Locally
+
+Since this is a client-side application with no external dependencies, running it is incredibly simple:
+
+1. Clone the repository:
+   ```bash
+   git clone [https://github.com/your-username/score-keeper.git](https://github.com/your-username/score-keeper.git)
