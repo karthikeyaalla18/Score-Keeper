@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Score Keeper</title>
+    <style>
+        :root {
+            --bg-color: #1a1b26;
+            --card-bg: #24293e;
+            --text-main: #ffffff;
+            --btn-run: #5e60ce; 
+            --btn-wide: #ff9f43;
+            --btn-nb: #54a0ff;
+            --btn-wkt: #ff4757;
+            --btn-undo: #576574;
+            --btn-end: #c0392b;
+            --btn-plus: #10b981;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- 1. INTRO ANIMATION --- */
+        #intro-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color); z-index: 100;
+            display: flex; justify-content: center; align-items: center;
+            flex-direction: column;
+        }
+        .scene-container { position: relative; width: 300px; height: 200px; }
+        .bat {
+            width: 10px; height: 80px; background: #d4a373;
+            border-radius: 5px; position: absolute; left: 50%; top: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            border: 2px solid #8d5524;
+            transform-origin: top center;
+        }
+        .bat-handle {
+            width: 8px; height: 25px; background: #333;
+            position: absolute; top: -20px; left: 1px; border-radius: 4px;
+        }
+        .ball-anim {
+            width: 15px; height: 15px; background: white;
+            border-radius: 50%; position: absolute; left: -20px; top: 60%;
+            box-shadow: 0 0 8px white;
+        }
+        .logo-text {
+            font-size: 3.5rem; font-weight: 900; margin-top: 20px;
+            opacity: 0; color: #fff; letter-spacing: 2px;
+            animation: textFadeIn 0.5s ease forwards 2.0s;
+        }
+        .animate-ball { animation: ballPath 2s ease-in-out forwards; }
+        .animate-bat { animation: batSwing 0.4s ease-in-out 0.9s forwards; }
+        @keyframes ballPath {
+            0% { left: -50px; top: 60%; }
+            50% { left: 48%; top: 60%; }
+            55% { left: 52%; top: 58%; }
+            100% { left: 400px; top: -100px; }
+        }
+        @keyframes batSwing {
+            0% { transform: translate(-50%, -50%) rotate(-45deg); }
+            50% { transform: translate(-50%, -50%) rotate(60deg); }
+            100% { transform: translate(-50%, -50%) rotate(-45deg); }
+        }
+        @keyframes textFadeIn { to { opacity: 1; transform: scale(1.1); } }
+
+        /* --- 2. SETUP SCREEN --- */
+        #setup-screen {
+            display: none; height: 100%;
+            justify-content: center; align-items: center; flex-direction: column;
+        }
+        .setup-card {
+            background: var(--card-bg); padding: 30px; border-radius: 20px;
+            text-align: center; width: 80%; max-width: 300px;
+        }
+        input {
+            padding: 15px; font-size: 1.5rem; border-radius: 10px;
+            border: none; text-align: center; margin: 20px 0;
+            width: 100px; background: #1a1b26; color: white;
+        }
+        .start-btn {
+            background: var(--btn-run); color: white; padding: 15px 40px;
+            font-size: 1.2rem; border: none; border-radius: 30px;
+            width: 100%; cursor: pointer;
+        }
+
+        /* --- 3. MATCH SCREEN --- */
+        #match-screen {
+            display: none; 
+            flex-direction: column; 
+            height: 100%; 
+            padding: 10px; 
+            box-sizing: border-box;
+            max-width: 500px; 
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .top-nav {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 5px;
+        }
+        .btn-card {
+            background: #fff; color: #1a1b26; border: none;
+            padding: 5px 12px; border-radius: 15px; font-weight: bold; font-size: 0.8rem;
+        }
+
+        .score-card {
+            background: var(--card-bg); 
+            padding: 10px 15px;
+            border-radius: 15px;
+            text-align: center; 
+            margin-bottom: 10px;
+            flex-shrink: 0;
+        }
+        .main-score { font-size: 3.5rem; font-weight: bold; margin: 0; line-height: 1; }
+        .overs-display { font-size: 1.1rem; color: #a0a0a0; margin-top: 2px; }
+        .target-msg { color: #feca57; font-weight: bold; font-size: 0.9rem; margin-top: 5px; min-height: 18px; }
+
+        .history-label { font-size: 0.8rem; color: #888; margin-bottom: 3px; }
+        .ball-row {
+            display: flex; gap: 8px; height: 35px; align-items: center;
+            margin-bottom: 10px; overflow-x: auto;
+            flex-shrink: 0;
+        }
+        .ball-circle {
+            width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; color: white; background: #333; font-size: 0.75rem; 
+        }
+        .b-run { background: var(--btn-run); }
+        .b-four { background: var(--btn-run); border: 2px solid gold; color: gold; }
+        .b-six { background: var(--btn-run); border: 2px solid #2ecc71; color: #2ecc71; }
+        .b-wd, .b-nb { background: var(--btn-wide); color: black; }
+        .b-wkt { background: var(--btn-wkt); }
+
+        .keypad {
+            display: grid; 
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: repeat(4, 1fr);
+            gap: 8px; 
+            margin-top: auto; 
+            flex-grow: 1;
+            min-height: 0;
+        }
+        .btn {
+            border: none; border-radius: 12px;
+            color: white; font-weight: bold; cursor: pointer;
+            box-shadow: 0 3px 0 rgba(0,0,0,0.2);
+            font-size: 1.3rem;
+            width: 100%; height: 100%; 
+        }
+        .btn:active { transform: translateY(2px); box-shadow: none; }
+
+        .btn-r { background-color: var(--btn-run); }
+        .btn-w { background-color: var(--btn-wide); font-size: 1rem; }
+        .btn-n { background-color: var(--btn-nb); font-size: 1rem; }
+        .btn-k { background-color: var(--btn-wkt); font-size: 1rem; }
+        .btn-plus { background-color: var(--btn-plus); font-size: 1.5rem; }
+        .btn-u { background-color: var(--btn-undo); font-size: 0.9rem; }
+        .btn-declare {
+            background-color: transparent; border: 2px solid var(--btn-end);
+            color: var(--btn-end); font-size: 0.9rem;
+        }
+
+        /* --- CUSTOM MODALS --- */
+        #modal-overlay {
+            display: none; position: fixed; z-index: 200; left: 0; top: 0;
+            width: 100%; height: 100%; background: rgba(0,0,0,0.85);
+            justify-content: center; align-items: center;
+        }
+        .custom-modal {
+            background: #24293e; border-radius: 15px; padding: 25px;
+            width: 85%; max-width: 320px; text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid #475569;
+        }
+        .modal-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; color: white; }
+        .modal-desc { color: #ccc; margin-bottom: 20px; }
+        
+        .modal-btn-group { display: flex; gap: 10px; justify-content: center; }
+        .m-btn {
+            padding: 12px 20px; border-radius: 8px; border: none; font-weight: bold; flex: 1; cursor: pointer;
+        }
+        .m-btn-yes { background: var(--btn-run); color: white; }
+        .m-btn-no { background: #334155; color: white; }
+
+        /* NB Grid */
+        .nb-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px;}
+        .nb-btn {
+            background: var(--btn-wide); color: black; padding: 15px; 
+            border: none; border-radius: 8px; font-weight: bold; font-size: 1.1rem;
+        }
+        .plus-btn-opt {
+            background: var(--btn-plus); color: white; padding: 15px;
+            border: none; border-radius: 8px; font-weight: bold; font-size: 1.1rem;
+        }
+
+        /* --- WINNER SCREEN --- */
+        #winner-screen {
+            display: none; position: fixed; z-index: 300; left: 0; top: 0;
+            width: 100%; height: 100%;
+            background: radial-gradient(circle, #24293e 0%, #0f172a 100%);
+            justify-content: center; align-items: center; flex-direction: column;
+            text-align: center;
+        }
+        
+        .trophy-container {
+            font-size: 6rem;
+            animation: bounceIn 1s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            margin-bottom: 20px;
+        }
+        @keyframes bounceIn {
+            0% { transform: scale(0); opacity: 0; }
+            60% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+
+        .winner-text {
+            font-size: 2rem; font-weight: 900; color: #ffd700;
+            text-transform: uppercase; margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+            animation: slideUp 0.8s ease-out 0.5s forwards;
+            opacity: 0; transform: translateY(20px);
+        }
+        .winner-sub {
+            font-size: 1.2rem; color: #fff; margin-bottom: 30px;
+            animation: slideUp 0.8s ease-out 0.7s forwards;
+            opacity: 0; transform: translateY(20px);
+        }
+        @keyframes slideUp { to { opacity: 1; transform: translateY(0); } }
+
+        .play-again-btn {
+            background: #2ecc71; color: white; padding: 15px 40px;
+            border-radius: 30px; font-size: 1.2rem; font-weight: bold;
+            border: none; cursor: pointer;
+            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.4);
+            animation: fadeIn 1s ease 1.5s forwards;
+            opacity: 0;
+        }
+        
+        .confetti {
+            position: absolute; width: 10px; height: 10px;
+            background-color: #f2d74e;
+            animation: fall linear forwards;
+        }
+        @keyframes fall { to { transform: translateY(100vh) rotate(720deg); } }
+        @keyframes fadeIn { to { opacity: 1; } }
+
+        /* Toast */
+        #toast {
+            visibility: hidden; min-width: 250px; background-color: #333; color: #fff;
+            text-align: center; border-radius: 50px; padding: 12px; position: fixed;
+            z-index: 400; left: 50%; bottom: 30px; transform: translateX(-50%);
+            font-size: 0.9rem; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+
+        /* Scoreboard Modal */
+        #scoreboard-modal {
+            display: none; position: fixed; z-index: 150; left: 0; top: 0;
+            width: 100%; height: 100%; background-color: #1a1b26;
+            flex-direction: column;
+        }
+        .sb-header {
+            padding: 15px; background: #24293e; display: flex; 
+            justify-content: space-between; align-items: center; font-weight: bold;
+        }
+        .sb-body { overflow-y: auto; flex: 1; padding: 10px; }
+        .score-section-title {
+            background: #334155; padding: 8px 15px; font-weight: bold; font-size: 0.9rem;
+            margin-top: 10px; border-radius: 5px; color: #e2e8f0;
+        }
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+        td { padding: 10px; border-bottom: 1px solid #334155; font-size: 0.9rem; color: #cbd5e1; }
+        
+        /* Celebration */
+        #celebration {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); display: none;
+            justify-content: center; align-items: center; flex-direction: column;
+            z-index: 200; pointer-events: none;
+        }
+        .cel-title { font-size: 5rem; font-weight: 900; color: gold; animation: popUp 0.5s; }
+        @keyframes popUp { from { transform: scale(0); } to { transform: scale(1); } }
+
+    </style>
+</head>
+<body>
+
+    <div id="intro-screen">
+        <div class="scene-container">
+            <div class="bat" id="bat"><div class="bat-handle"></div></div>
+            <div class="ball-anim" id="ball"></div>
+        </div>
+        <div class="logo-text">Score Keeper</div>
+    </div>
+
+    <div id="setup-screen">
+        <div class="setup-card">
+            <h2 style="margin:0; color: #fff;">MATCH SETUP</h2>
+            <p style="color: #888;">Enter Overs</p>
+            <input type="number" id="oversInput" value="5" min="1">
+            <button class="start-btn" onclick="startGame()">START MATCH</button>
+        </div>
+    </div>
+
+    <div id="match-screen">
+        <div class="top-nav">
+            <div style="font-weight:bold; color:#888; font-size: 0.9rem;">INNINGS <span id="innings-top">1</span></div>
+            <button class="btn-card" onclick="openScoreboard()">📊 SCORECARD</button>
+        </div>
+
+        <div class="score-card">
+            <div class="main-score"><span id="score">0</span>/<span id="wickets">0</span></div>
+            <div class="overs-display">Overs: <span id="overs">0.0</span></div>
+            <div class="target-msg" id="target-msg"></div>
+        </div>
+
+        <div class="history-label">THIS OVER:</div>
+        <div class="ball-row" id="this-over-display"></div>
+
+        <div class="keypad">
+            <button class="btn btn-w" onclick="addBall('WD')">WD</button>
+            <button class="btn btn-n" onclick="openNoBallModal()">NB</button>
+            <button class="btn btn-k" onclick="addBall('W')">OUT</button>
+            
+            <button class="btn btn-r" onclick="addBall(6)">6</button>
+            <button class="btn btn-r" onclick="addBall(4)">4</button>
+            <button class="btn btn-r" onclick="addBall(2)">2</button>
+            
+            <button class="btn btn-r" onclick="addBall(1)">1</button>
+            <button class="btn btn-r" onclick="addBall(0)">0</button>
+            <button class="btn btn-r" onclick="addBall(3)">3</button>
+
+            <button class="btn btn-u" onclick="undo()">Undo ↺</button>
+            <button class="btn btn-plus" onclick="openPlusModal()">+</button>
+            <button class="btn btn-declare" onclick="confirmEndInnings()">END INN ⚠</button>
+        </div>
+    </div>
+
+    <div id="winner-screen">
+        <div class="trophy-container">🏆</div>
+        <div class="winner-text" id="winner-title">BATTING WINS!</div>
+        <div class="winner-sub" id="winner-subtitle">By 5 Runs</div>
+        <button class="play-again-btn" onclick="resetGame()">PLAY AGAIN</button>
+        <div style="position: absolute; top: 20px; right: 20px; color: #666; font-size: 2rem; cursor: pointer;" onclick="resetGame()">&times;</div>
+    </div>
+
+    <div id="modal-overlay"></div>
+    <div id="scoreboard-modal">
+        <div class="sb-header">
+            <span>Match Scorecard</span>
+            <span style="font-size: 1.5rem; cursor: pointer;" onclick="closeScoreboard()">&times;</span>
+        </div>
+        <div class="sb-body" id="score-table-container"></div>
+    </div>
+    <div id="toast">Message</div>
+    <div id="celebration"><div class="cel-title" id="cel-text">4</div></div>
+
+    <script>
+        // --- ANIMATION START ---
+        window.onload = () => {
+            document.getElementById('ball').classList.add('animate-ball');
+            document.getElementById('bat').classList.add('animate-bat');
+            setTimeout(() => {
+                document.getElementById('intro-screen').style.display = 'none';
+                document.getElementById('setup-screen').style.display = 'flex';
+            }, 3000);
+        };
+
+        // --- STATE ---
+        let totalOvers = 0;
+        let state = {
+            score: 0,
+            wickets: 0,
+            ballsLegal: 0,
+            ballsTotal: 0,
+            innings: 1,
+            target: null,
+            thisOver: [], 
+            ballLog: [], 
+            pastInningsData: null 
+        };
+        let historyStack = [];
+
+        function startGame() {
+            const val = document.getElementById('oversInput').value;
+            if (val < 1) return showToast("Enter valid overs");
+            totalOvers = parseInt(val);
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('match-screen').style.display = 'flex';
+            updateUI();
+        }
+
+        // --- WINNER LOGIC ---
+        function showWinner(title, subtitle) {
+            const winScreen = document.getElementById('winner-screen');
+            document.getElementById('winner-title').innerText = title;
+            document.getElementById('winner-subtitle').innerText = subtitle;
+            
+            for(let i=0; i<30; i++) {
+                let c = document.createElement('div');
+                c.className = 'confetti';
+                c.style.left = Math.random() * 100 + 'vw';
+                c.style.animationDuration = (Math.random() * 2 + 1) + 's';
+                c.style.backgroundColor = ['#ff0', '#f00', '#0f0', '#00f'][Math.floor(Math.random()*4)];
+                winScreen.appendChild(c);
+            }
+            winScreen.style.display = 'flex';
+        }
+
+        function resetGame() {
+            state = {
+                score: 0, wickets: 0, ballsLegal: 0, ballsTotal: 0,
+                innings: 1, target: null, thisOver: [], ballLog: [], pastInningsData: null 
+            };
+            historyStack = [];
+            const winScreen = document.getElementById('winner-screen');
+            winScreen.querySelectorAll('.confetti').forEach(c => c.remove());
+            winScreen.style.display = 'none';
+            document.getElementById('match-screen').style.display = 'none';
+            document.getElementById('setup-screen').style.display = 'flex';
+            document.getElementById('target-msg').innerText = "";
+        }
+
+        // --- GAME LOGIC ---
+        function addBall(type, nbRuns = 0) {
+            if(checkMatchStatus()) return; 
+
+            saveState();
+
+            let currentLegalVisual = state.thisOver.filter(b => b.css !== 'b-wd' && b.css !== 'b-nb').length;
+            if (currentLegalVisual >= 6) state.thisOver = [];
+
+            let runs = 0, label = type, cssClass = 'b-run';
+            let isLegal = true;
+
+            if (typeof type === 'number') {
+                runs = type;
+                state.ballsLegal++;
+                if (runs === 4) { cssClass = 'b-four'; showCeleb('4'); }
+                if (runs === 6) { cssClass = 'b-six'; showCeleb('6'); }
+            } 
+            else if (type === 'WD') {
+                runs = 1; isLegal = false; cssClass = 'b-wd';
+            } 
+            else if (type === 'NB') {
+                runs = 1 + nbRuns; 
+                isLegal = false; 
+                cssClass = 'b-nb';
+                label = nbRuns > 0 ? `NB+${nbRuns}` : 'NB';
+                if(nbRuns === 4 || nbRuns === 6) showCeleb(nbRuns);
+            }
+            else if (type === 'W') {
+                state.wickets++;
+                state.ballsLegal++;
+                label = 'W';
+                cssClass = 'b-wkt';
+                showCeleb('OUT');
+            }
+            // NEW: NB_WICKET Logic
+            else if (type === 'NB_WICKET') {
+                runs = 1 + nbRuns; // 1 NB + Completed
+                state.wickets++;
+                state.score += runs;
+                isLegal = false;
+                cssClass = 'b-nb';
+                label = `NB+W${nbRuns > 0 ? '+'+nbRuns : ''}`;
+                showCeleb('OUT');
+            }
+
+            // Normal score add for non-special types
+            if (type !== 'NB_WICKET') {
+                state.score += runs;
+            }
+
+            state.ballsTotal++;
+            state.thisOver.push({ label: label, css: cssClass });
+            state.ballLog.push({ label: label, type: isLegal ? 'legal' : 'extra', runs: runs });
+
+            if(checkMatchStatus()) return; 
+
+            if (state.innings === 1 && state.ballsLegal >= totalOvers * 6) {
+                setTimeout(() => {
+                    showCustomConfirm("Overs Completed! Start 2nd Innings?", switchInnings);
+                }, 500);
+            }
+            
+            updateUI();
+        }
+
+        // --- PLUS BUTTON LOGIC ---
+        function openPlusModal() {
+            if(state.ballLog.length === 0) return showToast("Bowl a ball first!");
+            const html = `
+                <div class="modal-title">Add Extra Runs to Last Ball</div>
+                <div class="nb-grid">
+                    <button class="plus-btn-opt" onclick="resolvePlus(1)">+1</button>
+                    <button class="plus-btn-opt" onclick="resolvePlus(2)">+2</button>
+                    <button class="plus-btn-opt" onclick="resolvePlus(3)">+3</button>
+                    <button class="plus-btn-opt" onclick="resolvePlus(4)">+4</button>
+                </div>
+                <div style="margin-top:15px"><button class="m-btn m-btn-no" onclick="closeModal()">Cancel</button></div>
+            `;
+            showModal(html);
+        }
+
+        function resolvePlus(runsToAdd) {
+            closeModal();
+            saveState();
+            state.score += runsToAdd;
+            
+            let lastBallIndex = state.ballLog.length - 1;
+            let lastVisIndex = state.thisOver.length - 1;
+
+            if(lastBallIndex >= 0) {
+                state.ballLog[lastBallIndex].runs += runsToAdd;
+                state.ballLog[lastBallIndex].label += `+${runsToAdd}`;
+            }
+            if(lastVisIndex >= 0) {
+                state.thisOver[lastVisIndex].label += `+${runsToAdd}`;
+            }
+
+            showToast(`Added ${runsToAdd} runs`);
+            updateUI();
+            checkMatchStatus();
+        }
+
+        function checkMatchStatus() {
+            if (state.innings === 2) {
+                if (state.score >= state.target) { 
+                    setTimeout(() => showWinner("BATTING WINS!", `Chased ${state.target} runs`), 500);
+                    return true; 
+                }
+                if (state.ballsLegal >= totalOvers * 6) {
+                    if (state.score === state.target - 1) {
+                        setTimeout(() => showWinner("MATCH TIED!", "Scores Level"), 500);
+                    } else {
+                        let diff = state.target - state.score;
+                        setTimeout(() => showWinner("BOWLING WINS!", `Won by ${diff-1} runs`), 500);
+                    }
+                    return true; 
+                }
+            }
+            return false;
+        }
+
+        function confirmEndInnings() {
+            if(state.innings === 2 && (state.score >= state.target || state.ballsLegal >= totalOvers*6)) return;
+            let msg = state.innings === 1 ? "End 1st Innings now?" : "End Match? (Batting Team All Out?)";
+            const yesAction = state.innings === 1 ? switchInnings : () => {
+                if (state.score === state.target - 1) showWinner("MATCH TIED!", "Scores Level");
+                else {
+                     let diff = state.target - state.score;
+                     showWinner("BOWLING WINS!", `Won by ${diff - 1} runs`);
+                }
+            };
+            showCustomConfirm(msg, yesAction);
+        }
+
+        function showToast(msg) {
+            const x = document.getElementById("toast");
+            x.innerText = msg;
+            x.className = "show";
+            setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
+        }
+        function showModal(htmlContent) {
+            const overlay = document.getElementById('modal-overlay');
+            overlay.innerHTML = `<div class="custom-modal">${htmlContent}</div>`;
+            overlay.style.display = 'flex';
+        }
+        function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
+        
+        // --- NO BALL MODAL ---
+        function openNoBallModal() {
+            if(state.innings === 2 && state.score >= state.target) return;
+            const html = `
+                <div class="modal-title">No Ball Actions</div>
+                <div class="nb-grid">
+                    <button class="nb-btn" onclick="resolveNB(0)">0</button>
+                    <button class="nb-btn" onclick="resolveNB(1)">1</button>
+                    <button class="nb-btn" onclick="resolveNB(2)">2</button>
+                    <button class="nb-btn" onclick="resolveNB(3)">3</button>
+                    <button class="nb-btn" onclick="resolveNB(4)">4</button>
+                    <button class="nb-btn" onclick="resolveNB(6)">6</button>
+                </div>
+                <div style="margin-bottom:10px">
+                    <button class="m-btn" style="background:var(--btn-wkt); color:white; width:100%" onclick="openNBWicketInput()">RUN OUT / WICKET</button>
+                </div>
+                <div><button class="m-btn m-btn-no" onclick="closeModal()">Cancel</button></div>
+            `;
+            showModal(html);
+        }
+
+        function openNBWicketInput() {
+             const html = `
+                <div class="modal-title">Runs Completed before Out?</div>
+                <div class="nb-grid">
+                    <button class="nb-btn" onclick="resolveNBWicket(0)">0</button>
+                    <button class="nb-btn" onclick="resolveNBWicket(1)">1</button>
+                    <button class="nb-btn" onclick="resolveNBWicket(2)">2</button>
+                </div>
+                <div style="margin-top:15px"><button class="m-btn m-btn-no" onclick="openNoBallModal()">Back</button></div>
+            `;
+            showModal(html);
+        }
+
+        function resolveNB(batRuns) { closeModal(); addBall('NB', batRuns); }
+        function resolveNBWicket(runs) { closeModal(); addBall('NB_WICKET', runs); }
+
+        function showCustomConfirm(msg, yesCallback) {
+            const html = `
+                <div class="modal-title">Confirm Action</div>
+                <div class="modal-desc">${msg}</div>
+                <div class="modal-btn-group">
+                    <button class="m-btn m-btn-no" onclick="closeModal()">No</button>
+                    <button class="m-btn m-btn-yes" id="confirm-yes">Yes</button>
+                </div>
+            `;
+            showModal(html);
+            document.getElementById('confirm-yes').onclick = () => { closeModal(); yesCallback(); };
+        }
+
+        function switchInnings() {
+            state.pastInningsData = JSON.parse(JSON.stringify(state.ballLog));
+            state.target = state.score + 1;
+            state.innings = 2;
+            state.score = 0; state.wickets = 0; state.ballsLegal = 0; state.ballsTotal = 0;
+            state.thisOver = []; state.ballLog = []; historyStack = [];
+            showToast(`Target set: ${state.target} runs`);
+            updateUI();
+        }
+
+        function saveState() { historyStack.push(JSON.parse(JSON.stringify(state))); }
+        function undo() {
+            if (historyStack.length === 0) return showToast("Nothing to undo");
+            state = historyStack.pop();
+            updateUI();
+            showToast("Undo Successful");
+        }
+        function showCeleb(text) {
+            const el = document.getElementById('celebration');
+            document.getElementById('cel-text').innerText = text;
+            el.style.display = 'flex';
+            setTimeout(() => el.style.display = 'none', 1000);
+        }
+
+        function openScoreboard() { renderScoreTable(); document.getElementById('scoreboard-modal').style.display = 'flex'; }
+        function closeScoreboard() { document.getElementById('scoreboard-modal').style.display = 'none'; }
+        function renderScoreTable() {
+            const container = document.getElementById('score-table-container');
+            container.innerHTML = ''; 
+            if (state.pastInningsData) {
+                container.innerHTML += `<div class="score-section-title">1st Innings</div>`;
+                container.innerHTML += generateTableHTML(state.pastInningsData);
+            }
+            let currentTitle = state.innings === 1 ? "1st Innings" : "2nd Innings";
+            container.innerHTML += `<div class="score-section-title">${currentTitle} (Live)</div>`;
+            container.innerHTML += generateTableHTML(state.ballLog);
+        }
+        function generateTableHTML(logArray) {
+            let html = `<table><tbody>`;
+            let currentOverString = [], currentExtras = 0, legalCount = 0, overNum = 1;
+            logArray.forEach((ball) => {
+                currentOverString.push(ball.label);
+                if(ball.type !== 'legal') currentExtras++; else legalCount++;
+                if (legalCount === 6) {
+                    html += `<tr><td width="15%"><b>${overNum}</b></td><td>${currentOverString.join(' - ')} <b>(${currentExtras})</b></td></tr>`;
+                    overNum++; currentOverString = []; currentExtras = 0; legalCount = 0;
+                }
+            });
+            if (currentOverString.length > 0) {
+                 html += `<tr><td width="15%"><b>${overNum}</b></td><td>${currentOverString.join(' - ')} <b>(${currentExtras})</b></td></tr>`;
+            }
+            html += `</tbody></table>`;
+            return html;
+        }
+
+        function updateUI() {
+            document.getElementById('score').innerText = state.score;
+            document.getElementById('wickets').innerText = state.wickets;
+            document.getElementById('innings-top').innerText = state.innings;
+            let overs = Math.floor(state.ballsLegal / 6);
+            let balls = state.ballsLegal % 6;
+            document.getElementById('overs').innerText = `${overs}.${balls}`;
+            const tMsg = document.getElementById('target-msg');
+            if (state.innings === 2) {
+                let need = state.target - state.score;
+                let rem = (totalOvers * 6) - state.ballsLegal;
+                if(need > 0 && rem >= 0) tMsg.innerText = `Need ${need} runs in ${rem} balls`;
+            } else { tMsg.innerText = ""; }
+            
+            const container = document.getElementById('this-over-display');
+            container.innerHTML = '';
+            state.thisOver.forEach(b => {
+                const div = document.createElement('div');
+                div.className = `ball-circle ${b.css}`;
+                div.innerText = b.label;
+                container.appendChild(div);
+            });
+        }
+    </script>
+</body>
+</html>
